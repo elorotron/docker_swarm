@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_DATABASE: test_db
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password #root2334
+    secrets:
+      - mysql_root_password
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    ports:
+      - 8080:80
+    environment:
+      - PMA_HOST=mysql
+
+secrets:
+  mysql_root_password:
+    external: true
+    

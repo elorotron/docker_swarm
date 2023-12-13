@@ -1,0 +1,78 @@
+version: "3.8"
+
+services:
+  nginx:
+    container_name: nginx
+    image: suselstar/nginx:latest
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - SuselNetwork
+    deploy:
+      replicas: 4 #кол-во реплик на кластере
+      update_config: #как обновляться сервису
+        parallelism: 2 # кол-во контейнеров для одновременного обновления
+        order: start-first #порядок обновления start-first (запускается новый контейнер потом выкл. старый)
+        failure_action: rollback #что делать при сбое, continue, rollback, pause (default)
+        delay: 10s #задержка между обновлением
+      rollback_config: #что делать при сбое обновления
+        parallelism: 0
+        order: stop-first
+      restart_policy: #когда и как перезапускать контейнеры в случае проблем
+        condition: any # none, on-failure, any
+        delay: 5s #задержка между перезапусками
+        max_attempts: 3 #макс кол-во попыток перезапуска
+        window: 120s #сколько ждать что бы определить что рестарт удался
+      mode: replicated #n-ое кол-во контейнеров будет запущено на доступных нодах
+      #mode: global #на каждой ноде будет один контейнер
+      #placement:
+        #max_replicas_per_node: 2
+        #constraints:
+          #- "node.hostname==ubuntu-swarm-node-1" #https://docs.docker.com/engine/reference/commandline/service_create/#constraint
+          #- "node.labels.nginx==1"
+    healthcheck:
+      test: curl -f http://localhost:8081
+      interval: 5s
+      retries: 7
+    command: sh -c 'sleep 20 && nginx -g "daemon off;"'
+    
+
+  apache:
+    container_name: apache
+    image: suselstar/apache:latest
+    restart: always
+    ports:
+      - 8090:8090
+    networks:
+      - SuselNetwork
+    deploy:
+      replicas: 4
+      update_config:
+        parallelism: 2
+        order: start-first
+        failure_action: rollback
+        delay: 10s
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      mode: replicated
+      #mode: global
+      #placement:
+        #max_replicas_per_node: 2
+        #constraints:
+          #- "node.hostname==ubuntu-swarm-node-1" #https://docs.docker.com/engine/reference/commandline/service_create/#constraint
+          #- "node.labels.nginx==1"
+    healthcheck:
+      test: curl -f http://localhost:8090
+      interval: 3s
+      retries: 2
+
+networks:
+  SuselNetwork:
